@@ -1,0 +1,21 @@
+{
+	"name": "Assignment6",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "concurrently \"node worker.js\" \"node index.js\""
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"axios": "^0.18.0",
+		"bluebird": "^3.5.3",
+		"concurrently": "^4.0.1",
+		"express": "^4.16.4",
+		"node-redis-pubsub": "^4.0.0",
+		"redis": "^2.8.0"
+	}
+}
