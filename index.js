@@ -58,12 +58,10 @@ app.delete('/api/people/:id', async (req, res) => {
             const response = await nrpSender.sendMessage({
                 redis: redisConnection,
                 eventName: "delete_user",
-                data: {
-                    user_id: userId
-                }
+                data: userId
             });
 
-            res.json({'success': response.message})
+            res.json({'success': response})
 		} catch (e) {
 			res.status(500).json({error: e.message})
 		}

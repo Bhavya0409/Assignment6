@@ -81,38 +81,45 @@ redisConnection.on('post_user:request:*', async (message) => {
 });
 
 redisConnection.on('delete_user:request:*', async (message) => {
-    const {requestId, eventName, data} = message;
+    const {requestId, eventName, data:userId} = message;
+    const failedEvent = `${eventName}:failed:${requestId}`;
 
-    const user_id = message.data.user_id;
-    const usersString = await client.getAsync('users');
-    const users = JSON.parse(usersString).users;
+    try {
+        const usersString = await client.getAsync('users');
+        const users = JSON.parse(usersString).users;
 
-    const updatedUsers = users.filter(user => {
-    	return user.id !== user_id;
-	});
+        const updatedUsers = users.filter(user => {
+            return user.id !== userId;
+        });
 
-    if (updatedUsers.length === users.length) {
-    	// No one was deleted
-        const failedEvent = `${eventName}:failed:${requestId}`;
+        if (updatedUsers.length === users.length) {
+            // No one was deleted
+            redisConnection.emit(failedEvent, {
+                requestId: requestId,
+                data: {
+                    message: `No user found with id: ${userId}`
+                },
+                eventName: eventName
+            });
+        } else {
+            await client.setAsync('users', JSON.stringify({users: updatedUsers}));
+
+            const successEvent = `${eventName}:success:${requestId}`;
+            redisConnection.emit(successEvent, {
+                requestId: requestId,
+                data: `Deleted user with id: ${userId}`,
+                eventName: eventName
+            });
+        }
+	} catch (e) {
         redisConnection.emit(failedEvent, {
             requestId: requestId,
             data: {
-                message: `No user found with id: ${user_id}`
+                message: `Something went wrong.`
             },
             eventName: eventName
         });
-	} else {
-        await client.setAsync('users', JSON.stringify({users: updatedUsers}));
-
-        const successEvent = `${eventName}:success:${requestId}`;
-        redisConnection.emit(successEvent, {
-            requestId: requestId,
-            data: {
-                message: `Deleted user with id: ${user_id}`
-            },
-            eventName: eventName
-        });
-    }
+	}
 });
 
 redisConnection.on('put_user:request:*', async (message) => {
