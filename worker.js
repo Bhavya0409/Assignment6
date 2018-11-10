@@ -127,42 +127,48 @@ redisConnection.on('put_user:request:*', async (message) => {
 	//TODO use userId instead of user_id everywhere
     const {requestId, eventName, data} = message;
     const {userId, userBody} = data;
+    const failedEvent = `${eventName}:failed:${requestId}`;
 
-    const usersString = await client.getAsync('users');
-    const users = JSON.parse(usersString).users;
+    try {
+        const usersString = await client.getAsync('users');
+        const users = JSON.parse(usersString).users;
 
-    let userFound;
+        let userFound;
 
-    const updatedUsers = users.map(user => {
-    	if (user.id !== userId) {
-    		return user;
-		} else {
-    		userFound = {
-                id: user.id,
-                ...userBody
-            };
-    		return userFound;
-		}
-	});
-
-    if (userFound) {
-        await client.setAsync('users', JSON.stringify({users: updatedUsers}));
-        const successEvent = `${eventName}:success:${requestId}`;
-        //TODO return data: userBody instead of having an object with one property
-        redisConnection.emit(successEvent, {
-            requestId: requestId,
-            data: {
-                user: userFound
-            },
-            eventName: eventName
+        const updatedUsers = users.map(user => {
+            if (user.id !== userId) {
+                return user;
+            } else {
+                userFound = {
+                    id: user.id,
+                    ...userBody
+                };
+                return userFound;
+            }
         });
-	} else {
-        const failedEvent = `${eventName}:failed:${requestId}`;
-        //TODO return data: userBody instead of having an object with one property
+
+        if (userFound) {
+            await client.setAsync('users', JSON.stringify({users: updatedUsers}));
+            const successEvent = `${eventName}:success:${requestId}`;
+            redisConnection.emit(successEvent, {
+                requestId: requestId,
+                data: userFound,
+                eventName: eventName
+            });
+        } else {
+            redisConnection.emit(failedEvent, {
+                requestId: requestId,
+                data: {
+                    message: `No user found with id: ${userId}`
+                },
+                eventName: eventName
+            });
+        }
+	} catch (e) {
         redisConnection.emit(failedEvent, {
             requestId: requestId,
             data: {
-                message: `No user found with id: ${userId}`
+                message: `Something went wrong.`
             },
             eventName: eventName
         });

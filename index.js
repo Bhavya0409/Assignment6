@@ -86,7 +86,7 @@ app.put('/api/people/:id', async(req, res) => {
 				}
             });
 
-            res.json(response.user);
+            res.json(response);
         } catch (e) {
             res.status(500).json({error: e.message});
         }
