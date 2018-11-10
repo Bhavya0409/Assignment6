@@ -176,16 +176,21 @@ redisConnection.on('put_user:request:*', async (message) => {
 });
 
 async function init() {
-	// TODO dont reset store stopping server
-	const res = await axios.get("https://gist.githubusercontent.com/philbarresi/5cf15393d245b38a2d86ce8207d5076c/raw/d529fb474c1af347702ca4d7b992256237fa2819/lab5.json")
+	const res = await axios.get("https://gist.githubusercontent.com/philbarresi/5cf15393d245b38a2d86ce8207d5076c/raw/d529fb474c1af347702ca4d7b992256237fa2819/lab5.json");
 	const users = res.data;
 	nextUserId = users.length + 1;
 
-	client.setAsync('users', JSON.stringify({users: users})).then(() => {
-		console.log('Set initial users.')
-	}).catch(err => {
-		console.error(err);
-	});
+	try {
+		const usersString = await client.getAsync('users');
+		if (usersString) {
+			console.log('Users already set. Ready to go.')
+		} else {
+            await client.setAsync('users', JSON.stringify({users: users}));
+            console.log('Set initial users. Ready to go.');
+		}
+	} catch (e) {
+        console.error(e);
+	}
 }
 
 init();
