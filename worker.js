@@ -7,47 +7,45 @@ const redisConnection = require("./redis-connection");
 
 let nextUserId;
 
-redisConnection.on("create", (data, channel) => {
-	let message = data.message;
-	console.log("\n\n\n=================");
-	console.log("We've received a message! It's:");
-	console.log(message);
-	console.log(JSON.stringify(data));
-	console.log("=================\n\n\n");
-});
+redisConnection.on("get_user:request:*", async (message) => {
+	const {requestId, eventName} = message;
+    const userId = message.data;
 
-redisConnection.on("get_user:request:*", async (message, channel) => {
-	const requestId = message.requestId;
-	const eventName = message.eventName;
-	const successEvent = `${eventName}:success:${requestId}`;
-
-	const user_id = message.data.user_id;
 	const usersString = await client.getAsync('users');
 	const users = JSON.parse(usersString).users;
 
 	const user = users.find(user => {
-		return user.id === user_id;
+		return user.id === userId;
 	});
 
-	redisConnection.emit(successEvent, {
-		requestId: requestId,
-		data: {
-			user: user
-		},
-		eventName: eventName
-	});
+	if (user) {
+        const successEvent = `${eventName}:success:${requestId}`;
+        redisConnection.emit(successEvent, {
+            requestId: requestId,
+            data: user,
+            eventName: eventName
+        });
+	} else {
+        const failedEvent = `${eventName}:failed:${requestId}`;
+        redisConnection.emit(failedEvent, {
+            requestId: requestId,
+            data: {
+                message: `No user found with id: ${userId}`
+            },
+            eventName: eventName
+        });
+	}
 });
 
 redisConnection.on('post_user:request:*', async (message, channel) => {
-	const requestId = message.requestId;
-	const eventName = message.eventName;
+    const {requestId, eventName, data} = message;
     const successEvent = `${eventName}:success:${requestId}`;
 
     const usersString = await client.getAsync('users');
     const users = JSON.parse(usersString).users;
     const newUser = {
         id: nextUserId,
-        ...message.data
+        ...data
     };
     users.push(newUser);
     await client.setAsync('users', JSON.stringify({users: users}));
@@ -63,8 +61,7 @@ redisConnection.on('post_user:request:*', async (message, channel) => {
 });
 
 redisConnection.on('delete_user:request:*', async (message, channel) => {
-    const requestId = message.requestId;
-    const eventName = message.eventName;
+    const {requestId, eventName, data} = message;
 
     const user_id = message.data.user_id;
     const usersString = await client.getAsync('users');

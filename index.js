@@ -12,20 +12,19 @@ app.get('/api/people/:id', async (req, res) => {
 	const userId = parseInt(req.params.id);
 
 	if (isNaN(userId)) {
-		res.status(400).json({"error": "id is not a number"})
+		res.status(400).json({error: "id is not a number"})
 	} else {
-		const response = await nrpSender.sendMessage({
-			redis: redisConnection,
-			eventName: "get_user",
-			data: {
-				user_id: userId
-			}
-		});
+		try {
+			//TODO event names should be moved to static string constants file
+            const user = await nrpSender.sendMessage({
+                redis: redisConnection,
+                eventName: "get_user",
+                data: userId
+            });
 
-		if (response.user) {
-			res.json(response.user);
-		} else {
-			res.status(404).json({error: "couldn't find user with that id"})
+            res.json(user);
+		} catch (e) {
+            res.status(404).json({error: e.message})
 		}
 	}
 });
