@@ -123,8 +123,6 @@ redisConnection.on('delete_user:request:*', async (message) => {
 });
 
 redisConnection.on('put_user:request:*', async (message) => {
-	//TODO make sure all requests destructure message
-	//TODO use userId instead of user_id everywhere
     const {requestId, eventName, data} = message;
     const {userId, userBody} = data;
     const failedEvent = `${eventName}:failed:${requestId}`;
