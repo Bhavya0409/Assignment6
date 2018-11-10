@@ -1,14 +1,30 @@
 const express = require('express');
 const Promise = require('bluebird');
-const cache = Promise.promisifyAll(require('express-redis-cache')());
 
 const redisConnection = require("./redis-connection");
+const nrpSender = require("./nrp-sender-shim");
 const app = express();
 
 app.get('/api/people/:id', async (req, res) => {
-	redisConnection.emit("create", {message: "Hello, world!"});
+	const userId = parseInt(req.params.id);
 
-	res.json({"hello": "world"})
+	if (isNaN(userId)) {
+		res.status(400).json({"error": "id is not a number"})
+	} else {
+		const response = await nrpSender.sendMessage({
+			redis: redisConnection,
+			eventName: "get_user",
+			data: {
+				user_id: userId
+			}
+		});
+
+		if (response.user) {
+			res.json(response.user);
+		} else {
+			res.status(404).json({error: "couldn't find user with that id"})
+		}
+	}
 });
 
 app.listen(3000, () => console.log(`Example app listening on port 3000!`))
