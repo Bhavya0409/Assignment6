@@ -35,14 +35,40 @@ app.post('/api/people', async (req, res) => {
 	if (!first_name || !last_name || !email || !gender || !ip_address) {
 		res.status(400).json({error: "One of more of the following fields is missing: 'first_name', 'last_name', 'email', 'gender', 'ip_address'."})
 	} else {
-		const response = await nrpSender.sendMessage({
-			redis: redisConnection,
-			eventName: 'post_user',
-			data: req.body
-		});
+		try {
+            const response = await nrpSender.sendMessage({
+                redis: redisConnection,
+                eventName: 'post_user',
+                data: req.body
+            });
 
-		res.json(response.user);
+            res.json(response.user);
+		} catch (e) {
+			res.status(500).json({error: e});
+		}
 	}
 });
 
-app.listen(3000, () => console.log(`Example app listening on port 3000!`))
+app.delete('/api/people/:id', async (req, res) => {
+	const userId = parseInt(req.params.id);
+
+	if (isNaN(userId)) {
+        res.status(400).json({error: "id is not a number"})
+	} else {
+		try {
+            const response = await nrpSender.sendMessage({
+                redis: redisConnection,
+                eventName: "delete_user",
+                data: {
+                    user_id: userId
+                }
+            });
+
+            res.json({'success': response.message})
+		} catch (e) {
+			res.status(500).json({error: e.message})
+		}
+	}
+});
+
+app.listen(3000, () => console.log(`Example app listening on port 3000!`));
