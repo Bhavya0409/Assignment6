@@ -34,7 +34,30 @@ redisConnection.on("get_user:request:*", async (message, channel) => {
 		},
 		eventName: eventName
 	});
-})
+});
+
+redisConnection.on('post_user:request:*', async (message, channel) => {
+	const requestId = message.requestId;
+	const eventName = message.eventName;
+    const successEvent = `${eventName}:success:${requestId}`;
+
+    const usersString = await client.getAsync('users');
+    const users = JSON.parse(usersString).users;
+    const newUser = {
+        ...message.data,
+        id: users.length + 1
+    };
+    users.push(newUser);
+    await client.setAsync('users', JSON.stringify({users: users}));
+
+    redisConnection.emit(successEvent, {
+        requestId: requestId,
+        data: {
+            user: newUser
+        },
+        eventName: eventName
+    });
+});
 
 async function init() {
 	const res = await axios.get("https://gist.githubusercontent.com/philbarresi/5cf15393d245b38a2d86ce8207d5076c/raw/d529fb474c1af347702ca4d7b992256237fa2819/lab5.json")
