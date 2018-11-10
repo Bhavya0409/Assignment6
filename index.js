@@ -35,15 +35,15 @@ app.post('/api/people', async (req, res) => {
 		res.status(400).json({error: "One of more of the following fields is missing: 'first_name', 'last_name', 'email', 'gender', 'ip_address'."})
 	} else {
 		try {
-            const response = await nrpSender.sendMessage({
+            const user = await nrpSender.sendMessage({
                 redis: redisConnection,
                 eventName: 'post_user',
                 data: req.body
             });
 
-            res.json(response.user);
+            res.json(user);
 		} catch (e) {
-			res.status(500).json({error: e});
+			res.status(500).json({error: e.message});
 		}
 	}
 });

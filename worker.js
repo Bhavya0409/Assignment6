@@ -11,56 +11,76 @@ redisConnection.on("get_user:request:*", async (message) => {
 	const {requestId, eventName} = message;
     const userId = message.data;
 
-	const usersString = await client.getAsync('users');
-	const users = JSON.parse(usersString).users;
+    const failedEvent = `${eventName}:failed:${requestId}`;
 
-	const user = users.find(user => {
-		return user.id === userId;
-	});
+    try {
+        const usersString = await client.getAsync('users');
+        const users = JSON.parse(usersString).users;
 
-	if (user) {
-        const successEvent = `${eventName}:success:${requestId}`;
-        redisConnection.emit(successEvent, {
-            requestId: requestId,
-            data: user,
-            eventName: eventName
+        const user = users.find(user => {
+            return user.id === userId;
         });
-	} else {
-        const failedEvent = `${eventName}:failed:${requestId}`;
+
+        if (user) {
+            const successEvent = `${eventName}:success:${requestId}`;
+            redisConnection.emit(successEvent, {
+                requestId: requestId,
+                data: user,
+                eventName: eventName
+            });
+        } else {
+            redisConnection.emit(failedEvent, {
+                requestId: requestId,
+                data: {
+                    message: `No user found with id: ${userId}`
+                },
+                eventName: eventName
+            });
+        }
+	} catch (e) {
         redisConnection.emit(failedEvent, {
             requestId: requestId,
             data: {
-                message: `No user found with id: ${userId}`
+                message: `Something went wrong.`
             },
             eventName: eventName
         });
 	}
 });
 
-redisConnection.on('post_user:request:*', async (message, channel) => {
+redisConnection.on('post_user:request:*', async (message) => {
     const {requestId, eventName, data} = message;
-    const successEvent = `${eventName}:success:${requestId}`;
+    const failedEvent = `${eventName}:failed:${requestId}`;
 
-    const usersString = await client.getAsync('users');
-    const users = JSON.parse(usersString).users;
-    const newUser = {
-        id: nextUserId,
-        ...data
-    };
-    users.push(newUser);
-    await client.setAsync('users', JSON.stringify({users: users}));
-    nextUserId++;
+    try {
+        const usersString = await client.getAsync('users');
+        const users = JSON.parse(usersString).users;
+        const newUser = {
+            id: nextUserId,
+            ...data
+        };
+        users.push(newUser);
+        await client.setAsync('users', JSON.stringify({users: users}));
+        nextUserId++;
 
-    redisConnection.emit(successEvent, {
-        requestId: requestId,
-        data: {
-            user: newUser
-        },
-        eventName: eventName
-    });
+        const successEvent = `${eventName}:success:${requestId}`;
+        redisConnection.emit(successEvent, {
+            requestId: requestId,
+            data: newUser,
+            eventName: eventName
+        });
+	} catch (e) {
+        redisConnection.emit(failedEvent, {
+            requestId: requestId,
+            data: {
+                message: `Something went wrong.`
+            },
+            eventName: eventName
+        });
+	}
 });
 
-redisConnection.on('delete_user:request:*', async (message, channel) => {
+redisConnection.on('delete_user:request:*', async (message) => {
     const {requestId, eventName, data} = message;
 
     const user_id = message.data.user_id;
@@ -95,7 +115,7 @@ redisConnection.on('delete_user:request:*', async (message, channel) => {
     }
 });
 
-redisConnection.on('put_user:request:*', async (message, channel) => {
+redisConnection.on('put_user:request:*', async (message) => {
 	//TODO make sure all requests destructure message
 	//TODO use userId instead of user_id everywhere
     const {requestId, eventName, data} = message;
